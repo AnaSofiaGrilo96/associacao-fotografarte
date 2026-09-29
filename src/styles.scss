@@ -1,0 +1,41 @@
+@use '@angular/material' as mat;
+
+html {
+  color-scheme: light;
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$green-palette,
+    ),
+    typography: Roboto,
+    density: -1,
+  ));
+}
+
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background: var(--mat-sys-surface-container-low, #f5f5f5);
+  color: var(--mat-sys-on-surface);
+}
+
+.page { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+.page-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.page-header h1 { font-size: 22px; font-weight: 500; margin: 0; flex: 1; }
+.toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.spacer { flex: 1; }
+.card { background: var(--mat-sys-surface); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.table-wrap { overflow: auto; background: var(--mat-sys-surface); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+table.mat-mdc-table { width: 100%; }
+.num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.income { color: #1b7f3b; }
+.expense { color: #b3261e; }
+.muted { color: var(--mat-sys-on-surface-variant); }
+.status-chip { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+.status-chip.active { background: #d6f2df; color: #145a2b; }
+.status-chip.inactive { background: #fde2e0; color: #8a1c15; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 16px; align-items: start; }
+.full { grid-column: 1 / -1; }
+.empty { padding: 32px; text-align: center; color: var(--mat-sys-on-surface-variant); }
+.mat-mdc-dialog-content { max-height: 75vh; }
+.mat-mdc-row:hover { background: rgba(0,0,0,.03); }

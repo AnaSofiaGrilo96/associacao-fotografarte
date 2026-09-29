@@ -41,13 +41,13 @@ interface Row extends Transaction { balance: number; }
               <span class="spacer"></span>
               <button matButton (click)="confirmBalance(b.account)"><mat-icon>fact_check</mat-icon> Confirmar saldo</button>
             </div>
-            <div class="balance-main"><span class="muted">Previsão</span><strong>{{ b.forecast | currency:'EUR' }}</strong></div>
+            <div class="balance-main"><span class="muted">Saldo atual</span><strong>{{ b.forecast | currency:'EUR' }}</strong></div>
             <div class="muted small">
               @if (b.storedDate) {
-                Confirmado {{ b.stored | currency:'EUR' }} em {{ b.storedDate | date:'dd/MM/yyyy' }}
-                · {{ b.count }} {{ b.count === 1 ? 'movimento' : 'movimentos' }} desde então ({{ b.movements | currency:'EUR' }})
+                Saldo confirmado de {{ b.stored | currency:'EUR' }} em {{ b.storedDate | date:'dd/MM/yyyy' }}
+                + {{ b.count }} {{ b.count === 1 ? 'movimento' : 'movimentos' }} desde então ({{ b.movements | currency:'EUR' }})
               } @else {
-                Saldo ainda não confirmado · {{ b.count }} {{ b.count === 1 ? 'movimento' : 'movimentos' }} ({{ b.movements | currency:'EUR' }})
+                Sem saldo confirmado · calculado só a partir dos {{ b.count }} {{ b.count === 1 ? 'movimento' : 'movimentos' }} ({{ b.movements | currency:'EUR' }})
               }
             </div>
           </div>
@@ -56,7 +56,7 @@ interface Row extends Transaction { balance: number; }
           <div class="card balance warn">
             <div class="balance-head"><mat-icon>help_outline</mat-icon><span>Sem método de pagamento</span></div>
             <div class="balance-main"><span class="muted">Movimentos</span><strong>{{ unallocatedCount() }}</strong></div>
-            <div class="muted small">Não entram na previsão de nenhum saldo. Edite-os e indique o método de pagamento.</div>
+            <div class="muted small">Não entram no saldo de nenhuma conta. Edite-os e indique o método de pagamento.</div>
           </div>
         }
       </div>

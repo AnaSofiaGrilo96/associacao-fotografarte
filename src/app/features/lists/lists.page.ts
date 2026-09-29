@@ -36,7 +36,7 @@ import { ListItem, SecondaryAction, SimpleList } from './simple-list';
         </mat-tab>
         <mat-tab label="Métodos de pagamento">
           <div class="one">
-            <p class="muted hint">Cada método está associado à conta bancária ou ao numerário; é isso que alimenta a previsão dos saldos em Finanças. Use o botão de cada linha para trocar.</p>
+            <p class="muted hint">Cada método está associado à conta bancária ou ao numerário; é isso que determina em que conta cada movimento entra ou sai. Use o botão de cada linha para trocar.</p>
             <app-simple-list title="Métodos (numerário, transferência, …)" [items]="methods()" [subtitleOf]="methodSubtitle" [secondaryAction]="methodAccountAction"
               (add)="addMethod()" (rename)="renameMethod($event)" (toggle)="toggleMethod($event)" (remove)="removeMethod($event)" (secondary)="toggleMethodAccount($event)" />
           </div>

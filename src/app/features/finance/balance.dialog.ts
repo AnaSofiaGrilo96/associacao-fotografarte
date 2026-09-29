@@ -21,10 +21,11 @@ export interface BalanceDialogData { account: AccountKind; forecast: BalanceFore
     <h2 mat-dialog-title>Confirmar saldo {{ d.account === 'bank' ? 'em conta bancária' : 'em numerário' }}</h2>
     <mat-dialog-content>
       <p class="muted">
-        Previsão atual: <strong>{{ d.forecast.forecast | currency:'EUR' }}</strong>
+        Saldo calculado pelos movimentos: <strong>{{ d.forecast.forecast | currency:'EUR' }}</strong>
         @if (d.forecast.storedDate) {
-          (saldo confirmado de {{ d.forecast.stored | currency:'EUR' }} em {{ d.forecast.storedDate | date:'dd/MM/yyyy' }} + {{ d.forecast.count }} movimentos)
+          (confirmado {{ d.forecast.stored | currency:'EUR' }} em {{ d.forecast.storedDate | date:'dd/MM/yyyy' }} + {{ d.forecast.count }} movimentos)
         }
+        Se o extrato bancário ou a caixa mostrarem outro valor, registe-o aqui: a diferença fica corrigida a partir desta data.
       </p>
       <form [formGroup]="form" id="balForm" (ngSubmit)="save()" class="form-grid">
         <mat-form-field>
@@ -37,7 +38,7 @@ export interface BalanceDialogData { account: AccountKind; forecast: BalanceFore
           <input matInput [matDatepicker]="dp" formControlName="date" />
           <mat-datepicker-toggle matSuffix [for]="dp" />
           <mat-datepicker #dp />
-          <mat-hint>Os movimentos posteriores a esta data entram na previsão</mat-hint>
+          <mat-hint>Os movimentos posteriores a esta data somam-se a este saldo</mat-hint>
         </mat-form-field>
       </form>
     </mat-dialog-content>

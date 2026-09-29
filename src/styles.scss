@@ -1,5 +1,8 @@
 @use '@angular/material' as mat;
 
+// ---------- Temas ----------
+// O tema base (azul) é aplicado ao <html>; os outros são ativados pela classe theme-<nome>,
+// e o modo escuro pela classe dark (ver ThemeService).
 html {
   color-scheme: light;
   @include mat.theme((
@@ -11,6 +14,15 @@ html {
     density: -1,
   ));
 }
+
+html.theme-verde   { @include mat.theme((color: (primary: mat.$green-palette,        tertiary: mat.$azure-palette))); }
+html.theme-violeta { @include mat.theme((color: (primary: mat.$violet-palette,       tertiary: mat.$rose-palette))); }
+html.theme-rosa    { @include mat.theme((color: (primary: mat.$rose-palette,         tertiary: mat.$violet-palette))); }
+html.theme-laranja { @include mat.theme((color: (primary: mat.$orange-palette,       tertiary: mat.$cyan-palette))); }
+html.theme-ciano   { @include mat.theme((color: (primary: mat.$cyan-palette,         tertiary: mat.$orange-palette))); }
+html.theme-amarelo { @include mat.theme((color: (primary: mat.$yellow-palette,       tertiary: mat.$violet-palette))); }
+
+html.dark { color-scheme: dark; }
 
 html, body { height: 100%; margin: 0; }
 body {
@@ -30,12 +42,17 @@ table.mat-mdc-table { width: 100%; }
 .num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .income { color: #1b7f3b; }
 .expense { color: #b3261e; }
+html.dark .income { color: #6fd08c; }
+html.dark .expense { color: #ffb4ab; }
 .muted { color: var(--mat-sys-on-surface-variant); }
 .status-chip { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
 .status-chip.active { background: #d6f2df; color: #145a2b; }
 .status-chip.inactive { background: #fde2e0; color: #8a1c15; }
+html.dark .status-chip.active { background: #1f4d2e; color: #bfeccd; }
+html.dark .status-chip.inactive { background: #5c1f1a; color: #ffd6d2; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 16px; align-items: start; }
 .full { grid-column: 1 / -1; }
 .empty { padding: 32px; text-align: center; color: var(--mat-sys-on-surface-variant); }
 .mat-mdc-dialog-content { max-height: 75vh; }
 .mat-mdc-row:hover { background: rgba(0,0,0,.03); }
+html.dark .mat-mdc-row:hover { background: rgba(255,255,255,.05); }

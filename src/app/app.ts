@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { ThemeService } from './core/theme.service';
 import { RouterOutlet } from '@angular/router';
 
 @Component({
@@ -6,4 +7,6 @@ import { RouterOutlet } from '@angular/router';
   imports: [RouterOutlet],
   template: '<router-outlet />',
 })
-export class App {}
+export class App {
+  private readonly theme = inject(ThemeService);
+}

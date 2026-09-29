@@ -9,14 +9,16 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { AuthService } from '../core/auth.service';
+import { THEMES, ThemeService } from '../core/theme.service';
 import { DataService } from '../core/data.service';
 import { ChangePasswordDialog } from '../features/auth/change-password.dialog';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatSidenavModule, MatToolbarModule, MatListModule, MatIconModule, MatButtonModule, MatMenuModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatSidenavModule, MatToolbarModule, MatListModule, MatIconModule, MatButtonModule, MatMenuModule, MatTooltipModule],
   template: `
     <mat-sidenav-container class="container">
       <mat-sidenav #nav [mode]="isSmall() ? 'over' : 'side'" [opened]="!isSmall()" class="sidenav">
@@ -39,6 +41,17 @@ import { ChangePasswordDialog } from '../features/auth/change-password.dialog';
             <button matIconButton (click)="nav.toggle()" aria-label="Menu"><mat-icon>menu</mat-icon></button>
           }
           <span class="spacer"></span>
+          <button matIconButton [matMenuTriggerFor]="themeMenu" matTooltip="Tema" aria-label="Tema"><mat-icon>palette</mat-icon></button>
+          <mat-menu #themeMenu="matMenu" class="theme-menu">
+            <div class="theme-grid" (click)="$event.stopPropagation()">
+              @for (t of themes; track t.id) {
+                <button type="button" class="swatch" [class.selected]="themeSvc.theme() === t.id" [style.background]="t.color" (click)="themeSvc.theme.set(t.id)" [matTooltip]="t.label" [attr.aria-label]="t.label"></button>
+              }
+            </div>
+            <button mat-menu-item (click)="themeSvc.dark.set(!themeSvc.dark()); $event.stopPropagation()">
+              <mat-icon>{{ themeSvc.dark() ? 'light_mode' : 'dark_mode' }}</mat-icon>{{ themeSvc.dark() ? 'Modo claro' : 'Modo escuro' }}
+            </button>
+          </mat-menu>
           <button matButton [matMenuTriggerFor]="userMenu">
             <mat-icon>account_circle</mat-icon>
             <span class="email">{{ auth.user()?.email }}</span>
@@ -60,10 +73,15 @@ import { ChangePasswordDialog } from '../features/auth/change-password.dialog';
     .email { margin-left: 6px; }
     a.active { background: var(--mat-sys-secondary-container); border-radius: 24px; }
     @media (max-width: 600px) { .email { display: none; } }
+    .theme-grid { display: grid; grid-template-columns: repeat(4, 32px); gap: 10px; padding: 12px 16px; }
+    .swatch { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; padding: 0; }
+    .swatch.selected { border-color: var(--mat-sys-on-surface); box-shadow: 0 0 0 2px var(--mat-sys-surface); }
   `],
 })
 export class Shell {
   readonly auth = inject(AuthService);
+  readonly themeSvc = inject(ThemeService);
+  readonly themes = THEMES;
   private readonly router = inject(Router);
   private readonly data = inject(DataService);
   private readonly dialog = inject(MatDialog);

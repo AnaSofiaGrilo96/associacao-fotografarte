@@ -28,6 +28,7 @@ create table if not exists public.inactive_reasons (
 create table if not exists public.payment_methods (
   id          uuid primary key default gen_random_uuid(),
   name        text not null unique,
+  account     text not null default 'bank' check (account in ('bank', 'cash')), -- conta bancária ou numerário
   active      boolean not null default true,
   sort_order  integer not null default 100,
   created_at  timestamptz not null default now()
@@ -39,6 +40,11 @@ create table if not exists public.settings (
   default_fee_amount  numeric(10,2) not null default 0,
   default_joining_fee_amount numeric(10,2) not null default 3,
   report_footer       text,
+  initial_balance     numeric(10,2) not null default 0, -- saldo antes do primeiro relatório final
+  bank_balance        numeric(10,2) not null default 0, -- último saldo confirmado em conta
+  bank_balance_date   date,
+  cash_balance        numeric(10,2) not null default 0, -- último saldo confirmado em numerário
+  cash_balance_date   date,
   updated_at          timestamptz not null default now()
 );
 
@@ -98,6 +104,47 @@ create table if not exists public.transactions (
 );
 create index if not exists transactions_date_idx on public.transactions (date desc);
 create index if not exists transactions_category_idx on public.transactions (category_id);
+
+-- ---------- Relatórios emitidos (finais / aprovados) ----------
+create table if not exists public.reports (
+  id                uuid primary key default gen_random_uuid(),
+  number            integer not null,
+  period_from       date not null,
+  period_to         date not null,
+  previous_balance  numeric(10,2) not null,
+  income_total      numeric(10,2) not null,
+  expense_total     numeric(10,2) not null,
+  net               numeric(10,2) not null,
+  expected_balance  numeric(10,2) not null,
+  bank_balance      numeric(10,2) not null,
+  cash_balance      numeric(10,2) not null,
+  total_balance     numeric(10,2) not null,
+  difference        numeric(10,2) not null,
+  status            text not null default 'approved' check (status in ('approved')),
+  issued_at         timestamptz not null default now(),
+  issued_by         text,
+  data              jsonb not null default '{}'::jsonb, -- grelhas do relatório tal como foram emitidas
+  notes             text,
+  check (period_to >= period_from),
+  unique (number)
+);
+create index if not exists reports_period_to_idx on public.reports (period_to desc);
+
+alter table public.reports enable row level security;
+drop policy if exists "authenticated_all" on public.reports;
+create policy "authenticated_all" on public.reports for all to authenticated using (true) with check (true);
+
+-- Número sequencial atribuído automaticamente.
+create or replace function public.reports_assign_number() returns trigger language plpgsql as $$
+begin
+  if new.number is null or new.number = 0 then
+    select coalesce(max(number), 0) + 1 into new.number from public.reports;
+  end if;
+  return new;
+end $$;
+drop trigger if exists reports_number on public.reports;
+create trigger reports_number before insert on public.reports
+  for each row execute function public.reports_assign_number();
 
 -- ---------- updated_at automático ----------
 create or replace function public.set_updated_at() returns trigger language plpgsql as $$
@@ -236,8 +283,8 @@ insert into public.categories (name, type, is_system, sort_order) values
   ('Outras despesas', 'expense', false, 90)
 on conflict (name, type) do nothing;
 
-insert into public.payment_methods (name, sort_order) values
-  ('Numerário', 10), ('Transferência bancária', 20), ('MB WAY', 30), ('Multibanco', 40), ('Cheque', 50)
+insert into public.payment_methods (name, account, sort_order) values
+  ('Numerário', 'cash', 10), ('Transferência bancária', 'bank', 20), ('MB WAY', 'bank', 30), ('Multibanco', 'bank', 40), ('Cheque', 'bank', 50)
 on conflict (name) do nothing;
 
 insert into public.inactive_reasons (name, sort_order) values

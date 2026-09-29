@@ -38,7 +38,15 @@ function gridTable(doc: jsPDF, grid: ReportGrid, title: string, startY: number, 
   return (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
 }
 
-export function generateReportPdf(data: ReportData, associationName: string, footer: string | null): void {
+export interface PdfOptions {
+  /** Draft: adds a RASCUNHO watermark. */
+  draft: boolean;
+  /** Final report number and issue date (shown in the header). */
+  number?: number;
+  issuedAt?: string;
+}
+
+export function generateReportPdf(data: ReportData, associationName: string, footer: string | null, opts: PdfOptions = { draft: true }): void {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
   const period = `${fmtDate(data.inputs.from)} a ${fmtDate(data.inputs.to)}`;
@@ -51,7 +59,13 @@ export function generateReportPdf(data: ReportData, associationName: string, foo
   doc.text(`Relatório de contas — período de ${period}`, 14, 23);
   doc.setFontSize(8);
   doc.setTextColor(120);
-  doc.text(`Gerado em ${new Date().toLocaleString('pt-PT')}`, pageW - 14, 16, { align: 'right' });
+  if (opts.draft) {
+    doc.text(`Rascunho gerado em ${new Date().toLocaleString('pt-PT')}`, pageW - 14, 16, { align: 'right' });
+  } else {
+    const issued = opts.issuedAt ? new Date(opts.issuedAt) : new Date();
+    doc.text(`Relatório final n.º ${opts.number ?? '—'}`, pageW - 14, 16, { align: 'right' });
+    doc.text(`Emitido em ${issued.toLocaleDateString('pt-PT')}`, pageW - 14, 21, { align: 'right' });
+  }
   doc.setTextColor(0);
 
   let y = gridTable(doc, data.income, 'Receitas', 32, [27, 127, 59]);
@@ -87,12 +101,23 @@ export function generateReportPdf(data: ReportData, associationName: string, foo
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
+    const h = doc.internal.pageSize.getHeight();
     doc.setFontSize(7.5);
     doc.setTextColor(120);
-    const h = doc.internal.pageSize.getHeight();
     if (footer) doc.text(footer, 14, h - 8);
     doc.text(`Página ${i} de ${pageCount}`, pageW - 14, h - 8, { align: 'right' });
+    if (opts.draft) {
+      doc.saveGraphicsState();
+      doc.setGState(doc.GState({ opacity: 0.12 }));
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(110);
+      doc.setTextColor(179, 38, 30);
+      doc.text('RASCUNHO', pageW / 2, h / 2 + 20, { align: 'center', angle: 25 });
+      doc.restoreGraphicsState();
+    }
   }
+  doc.setTextColor(0);
 
-  doc.save(`relatorio_${data.inputs.from}_${data.inputs.to}.pdf`);
+  const name = opts.draft ? `rascunho_${data.inputs.from}_${data.inputs.to}.pdf` : `relatorio_final_${opts.number ?? ''}_${data.inputs.from}_${data.inputs.to}.pdf`;
+  doc.save(name);
 }

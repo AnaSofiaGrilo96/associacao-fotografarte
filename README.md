@@ -11,8 +11,8 @@ Aplicação web para gerir uma associação: associados, quotas e joias, finanç
 | Área | O que faz |
 |---|---|
 | **Associados** | Lista com pesquisa e filtros; ficha com foto, nome, contactos, NIF, morada, data de entrada, estado (ativo/inativo + motivo e data de saída) e notas. Registo de pagamentos de quotas por ano (vários anos de uma vez), com a **data real do pagamento**, método de pagamento e a **joia** de novo associado (valor configurável). |
-| **Finanças** | Extrato tipo bancário (mais recente primeiro) com saldo acumulado, filtros por período/tipo/categoria/texto e totais do período. Registo de receitas e despesas (data, descrição, valor, categoria, notas). Os pagamentos de quotas e joias geram automaticamente movimentos de receita nas categorias "Quotas" e "Joias". |
-| **Relatórios** | Escolha do período (de dia a dia), saldo da gerência anterior, saldo em conta bancária e em numerário. Duas grelhas (receitas e despesas) por categoria × mês, totais, e resumo com apuramento. Exporta para PDF (A4 horizontal). As quotas contam na data em que foram **recebidas**, não no ano a que respeitam. |
+| **Finanças** | Painel de saldos (conta bancária e numerário) com o último saldo confirmado e a **previsão** a partir dos movimentos posteriores, por método de pagamento. Extrato tipo bancário (mais recente primeiro), filtros por período/tipo/categoria/texto e totais do período. Registo de receitas e despesas (data, descrição, valor, categoria, método de pagamento, notas). Os pagamentos de quotas e joias geram automaticamente movimentos de receita nas categorias "Quotas" e "Joias". |
+| **Relatórios** | Escolha do período (de dia a dia). O **saldo da gerência anterior é automático**: total dos saldos do último relatório final anterior ao período (ou o saldo inicial das definições). Saldos de conta e numerário pré-preenchidos com a previsão e ajustáveis. Duas grelhas (receitas e despesas) por categoria × mês e resumo. **Exportar rascunho** (PDF com marca de água) ou **Emitir relatório final**, que grava o relatório como aprovado, confirma os saldos à data de fim do período e passa a alimentar o saldo anterior do próximo. Lista de relatórios emitidos com PDF fiel ao emitido; o mais recente pode ser anulado. As quotas contam na data em que foram **recebidas**, não no ano a que respeitam. |
 | **Listas e definições** | Categorias de receita e despesa, motivos de inatividade, métodos de pagamento, nome da associação, valores da quota e da joia por defeito e rodapé do relatório. |
 | **Utilizadores** | Geridos no painel do Supabase (*Authentication → Users*). Qualquer utilizador autenticado acede a tudo. |
 
@@ -90,7 +90,9 @@ supabase/
 - `membership_fees` — uma linha por associado/ano (`year`), com `amount`, `paid_on` (data real do pagamento) e `payment_method_id`.
 - `transactions` — movimentos; `type` = `income`/`expense`; `fee_id` / `joining_fee_member_id` ligam ao pagamento de quota ou joia que o gerou (esses movimentos são só de leitura na app e desaparecem se o pagamento for eliminado).
 - `categories` — categorias por tipo; "Quotas" e "Joias" são de sistema (não se eliminam).
-- `payment_methods` — métodos de pagamento (numerário, transferência, …).
+- `payment_methods` — métodos de pagamento (numerário, transferência, …); `account` diz se pertencem à conta bancária (`bank`) ou ao numerário (`cash`), o que alimenta a previsão dos saldos.
+- `reports` — relatórios finais emitidos (período, totais, saldos, número sequencial, emissor, e as grelhas em `data` para regenerar o PDF).
+- `settings` guarda também o saldo inicial e os últimos saldos confirmados de conta e numerário com a respetiva data.
 - `settings` — uma única linha (id = 1).
 
 Triggers em Postgres (`sync_fee_transaction`, `sync_joining_fee_transaction`) mantêm `transactions` em sincronia com as quotas e joias, por isso o extrato e os relatórios refletem sempre o que foi recebido. Contar as joias de um ano no relatório dá o número de novos associados nesse ano.

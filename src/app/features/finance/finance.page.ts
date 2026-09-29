@@ -12,7 +12,9 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { DataService } from '../../core/data.service';
-import { Category, PaymentMethod, Transaction, TransactionType } from '../../core/models';
+import { AccountKind, Category, PaymentMethod, Settings, Transaction, TransactionType } from '../../core/models';
+import { forecastBalance, unallocated } from '../../shared/balances';
+import { BalanceDialog, BalanceDialogData } from './balance.dialog';
 import { UiService } from '../../shared/ui.service';
 import { toIsoDate } from '../../shared/dates';
 import { round2 } from '../../shared/money';
@@ -30,11 +32,40 @@ interface Row extends Transaction { balance: number; }
         <button matButton="filled" (click)="create()"><mat-icon>add</mat-icon> Novo movimento</button>
       </div>
 
+      <div class="balances">
+        @for (b of forecasts(); track b.account) {
+          <div class="card balance">
+            <div class="balance-head">
+              <mat-icon>{{ b.account === 'bank' ? 'account_balance' : 'payments' }}</mat-icon>
+              <span>{{ b.account === 'bank' ? 'Conta bancária' : 'Numerário' }}</span>
+              <span class="spacer"></span>
+              <button matButton (click)="confirmBalance(b.account)"><mat-icon>fact_check</mat-icon> Confirmar saldo</button>
+            </div>
+            <div class="balance-main"><span class="muted">Previsão</span><strong>{{ b.forecast | currency:'EUR' }}</strong></div>
+            <div class="muted small">
+              @if (b.storedDate) {
+                Confirmado {{ b.stored | currency:'EUR' }} em {{ b.storedDate | date:'dd/MM/yyyy' }}
+                · {{ b.count }} {{ b.count === 1 ? 'movimento' : 'movimentos' }} desde então ({{ b.movements | currency:'EUR' }})
+              } @else {
+                Saldo ainda não confirmado · {{ b.count }} {{ b.count === 1 ? 'movimento' : 'movimentos' }} ({{ b.movements | currency:'EUR' }})
+              }
+            </div>
+          </div>
+        }
+        @if (unallocatedCount() > 0) {
+          <div class="card balance warn">
+            <div class="balance-head"><mat-icon>help_outline</mat-icon><span>Sem método de pagamento</span></div>
+            <div class="balance-main"><span class="muted">Movimentos</span><strong>{{ unallocatedCount() }}</strong></div>
+            <div class="muted small">Não entram na previsão de nenhum saldo. Edite-os e indique o método de pagamento.</div>
+          </div>
+        }
+      </div>
+
       <div class="tiles">
         <div class="card tile"><span class="muted">Receitas (período)</span><strong class="income">{{ totals().income | currency:'EUR' }}</strong></div>
         <div class="card tile"><span class="muted">Despesas (período)</span><strong class="expense">{{ totals().expense | currency:'EUR' }}</strong></div>
         <div class="card tile"><span class="muted">Apuramento (período)</span><strong [class.expense]="totals().net < 0">{{ totals().net | currency:'EUR' }}</strong></div>
-        <div class="card tile"><span class="muted">Saldo acumulado</span><strong>{{ overallBalance() | currency:'EUR' }}</strong></div>
+        <div class="card tile"><span class="muted">Acumulado dos movimentos (histórico)</span><strong>{{ overallBalance() | currency:'EUR' }}</strong></div>
       </div>
 
       <div class="toolbar">
@@ -122,6 +153,11 @@ interface Row extends Transaction { balance: number; }
     </div>
   `,
   styles: [`
+    .balances { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .balance-head { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+    .balance-main { display: flex; align-items: baseline; gap: 10px; margin: 6px 0 2px; }
+    .balance-main strong { font-size: 22px; }
+    .balance.warn { border-left: 4px solid #e0a800; }
     .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
     .tile { display: flex; flex-direction: column; gap: 4px; }
     .tile strong { font-size: 20px; }
@@ -141,6 +177,18 @@ export class FinancePage {
   readonly all = signal<Transaction[]>([]);
   readonly categories = signal<Category[]>([]);
   readonly paymentMethods = signal<PaymentMethod[]>([]);
+  readonly settings = signal<Settings | null>(null);
+
+  readonly forecasts = computed(() => {
+    const s = this.settings();
+    if (!s) return [];
+    return (['bank', 'cash'] as AccountKind[]).map((a) => forecastBalance(a, s, this.all()));
+  });
+  readonly unallocatedCount = computed(() => {
+    const s = this.settings();
+    const after = s ? [s.bank_balance_date, s.cash_balance_date].filter(Boolean).sort()[0] ?? null : null;
+    return unallocated(this.all(), after).length;
+  });
 
   readonly from = signal<Date | null>(new Date(this.currentYear, 0, 1));
   readonly to = signal<Date | null>(new Date(this.currentYear, 11, 31));
@@ -190,15 +238,22 @@ export class FinancePage {
   async load() {
     this.loading.set(true);
     try {
-      const [tx, cats, pms] = await Promise.all([this.data.listTransactions(), this.data.listCategories(true), this.data.listPaymentMethods()]);
+      const [tx, cats, pms, st] = await Promise.all([this.data.listTransactions(), this.data.listCategories(true), this.data.listPaymentMethods(), this.data.getSettings()]);
       this.all.set(tx);
       this.categories.set(cats);
       this.paymentMethods.set(pms);
+      this.settings.set(st);
     } catch (e) {
       this.ui.error(e);
     } finally {
       this.loading.set(false);
     }
+  }
+
+  confirmBalance(account: AccountKind) {
+    const forecast = this.forecasts().find((f) => f.account === account)!;
+    const data: BalanceDialogData = { account, forecast };
+    this.dialog.open(BalanceDialog, { width: '560px', data }).afterClosed().subscribe((s) => s && this.load());
   }
 
   setYear(y: number) {

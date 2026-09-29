@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import {
-  Category, InactiveReason, Member, MembershipFee, PaymentMethod, Settings, Transaction, TransactionType,
+  Category, InactiveReason, Member, MembershipFee, PaymentMethod, Report, Settings, Transaction, TransactionType,
 } from './models';
 
 function unwrap<T>(res: { data: T | null; error: { message: string } | null }): T {
@@ -83,7 +83,7 @@ export class DataService {
   async listTransactions(opts: { from?: string; to?: string; type?: TransactionType | null; categoryId?: string | null; search?: string } = {}): Promise<Transaction[]> {
     let q = this.sb
       .from('transactions')
-      .select('*, category:categories(name), payment_method:payment_methods(name)')
+      .select('*, category:categories(name), payment_method:payment_methods(name, account)')
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
     if (opts.from) q = q.gte('date', opts.from);
@@ -190,6 +190,20 @@ export class DataService {
     const out: Record<string, string> = {};
     for (const d of data ?? []) if (d.path && d.signedUrl) out[d.path] = d.signedUrl;
     return out;
+  }
+
+  // ---------- Reports (emitidos) ----------
+  async listReports(): Promise<Report[]> {
+    return unwrap(await this.sb.from('reports').select('*').order('period_to', { ascending: false }).order('number', { ascending: false }));
+  }
+
+  async createReport(r: Partial<Report>): Promise<Report> {
+    const { id: _id, number: _n, ...payload } = r;
+    return unwrap(await this.sb.from('reports').insert(payload).select().single());
+  }
+
+  async deleteReport(id: string): Promise<void> {
+    unwrap(await this.sb.from('reports').delete().eq('id', id));
   }
 
   // ---------- Settings ----------

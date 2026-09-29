@@ -11,7 +11,7 @@ import { DataService } from '../../core/data.service';
 import { Category, InactiveReason, PaymentMethod, Settings, TransactionType } from '../../core/models';
 import { UiService } from '../../shared/ui.service';
 import { NameDialog, NameDialogData } from '../../shared/name-dialog';
-import { ListItem, SimpleList } from './simple-list';
+import { ListItem, SecondaryAction, SimpleList } from './simple-list';
 
 @Component({
   selector: 'app-lists',
@@ -36,8 +36,9 @@ import { ListItem, SimpleList } from './simple-list';
         </mat-tab>
         <mat-tab label="Métodos de pagamento">
           <div class="one">
-            <app-simple-list title="Métodos (numerário, transferência, …)" [items]="methods()"
-              (add)="addMethod()" (rename)="renameMethod($event)" (toggle)="toggleMethod($event)" (remove)="removeMethod($event)" />
+            <p class="muted hint">Cada método está associado à conta bancária ou ao numerário; é isso que alimenta a previsão dos saldos em Finanças. Use o botão de cada linha para trocar.</p>
+            <app-simple-list title="Métodos (numerário, transferência, …)" [items]="methods()" [subtitleOf]="methodSubtitle" [secondaryAction]="methodAccountAction"
+              (add)="addMethod()" (rename)="renameMethod($event)" (toggle)="toggleMethod($event)" (remove)="removeMethod($event)" (secondary)="toggleMethodAccount($event)" />
           </div>
         </mat-tab>
         <mat-tab label="Definições">
@@ -58,6 +59,12 @@ import { ListItem, SimpleList } from './simple-list';
                   <input matInput type="number" step="0.01" min="0" formControlName="default_joining_fee_amount" />
                   <span matTextSuffix>€</span>
                 </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Saldo inicial (antes do 1.º relatório final)</mat-label>
+                  <input matInput type="number" step="0.01" formControlName="initial_balance" />
+                  <span matTextSuffix>€</span>
+                  <mat-hint>Usado como saldo da gerência anterior enquanto não houver relatórios finais</mat-hint>
+                </mat-form-field>
                 <mat-form-field class="full">
                   <mat-label>Rodapé do relatório (opcional)</mat-label>
                   <input matInput formControlName="report_footer" placeholder="Ex.: NIPC, morada, contactos" />
@@ -73,6 +80,7 @@ import { ListItem, SimpleList } from './simple-list';
   styles: [`
     .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-top: 16px; }
     .one { padding-top: 16px; max-width: 760px; }
+    .hint { margin: 0 0 12px; font-size: 13px; }
     @media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
   `],
 })
@@ -85,6 +93,11 @@ export class ListsPage {
   readonly categories = signal<Category[]>([]);
   readonly reasons = signal<InactiveReason[]>([]);
   readonly methods = signal<PaymentMethod[]>([]);
+  readonly methodSubtitle = (it: ListItem) => (it.account === 'cash' ? 'Numerário' : 'Conta bancária');
+  readonly methodAccountAction: SecondaryAction = {
+    icon: (it) => (it.account === 'cash' ? 'payments' : 'account_balance'),
+    tooltip: (it) => (it.account === 'cash' ? 'Passar a conta bancária' : 'Passar a numerário'),
+  };
   readonly incomeCats = computed(() => this.categories().filter((c) => c.type === 'income'));
   readonly expenseCats = computed(() => this.categories().filter((c) => c.type === 'expense'));
 
@@ -92,6 +105,7 @@ export class ListsPage {
     association_name: ['', Validators.required],
     default_fee_amount: [0, [Validators.required, Validators.min(0)]],
     default_joining_fee_amount: [0, [Validators.required, Validators.min(0)]],
+    initial_balance: [0, Validators.required],
     report_footer: [''],
   });
 
@@ -109,6 +123,7 @@ export class ListsPage {
         association_name: s.association_name,
         default_fee_amount: s.default_fee_amount,
         default_joining_fee_amount: s.default_joining_fee_amount,
+        initial_balance: s.initial_balance,
         report_footer: s.report_footer ?? '',
       });
     } catch (e) {
@@ -163,7 +178,7 @@ export class ListsPage {
   // Payment methods
   async addMethod() {
     const name = await this.ask({ title: 'Novo método de pagamento' });
-    if (name) this.run(() => this.data.savePaymentMethod({ name, active: true, sort_order: 100 }));
+    if (name) this.run(() => this.data.savePaymentMethod({ name, account: 'bank', active: true, sort_order: 100 }));
   }
   async renameMethod(it: ListItem) {
     const name = await this.ask({ title: 'Renomear método', value: it.name });
@@ -171,6 +186,9 @@ export class ListsPage {
   }
   toggleMethod(it: ListItem) {
     this.run(() => this.data.savePaymentMethod({ id: it.id, active: !it.active }));
+  }
+  toggleMethodAccount(it: ListItem) {
+    this.run(() => this.data.savePaymentMethod({ id: it.id, account: it.account === 'cash' ? 'bank' : 'cash' }));
   }
   async removeMethod(it: ListItem) {
     if (await this.ui.confirm({ title: 'Eliminar método', message: `Eliminar "${it.name}"? Só é possível se não estiver a ser usado em pagamentos; em alternativa, desative-o.`, confirmLabel: 'Eliminar', danger: true })) {
@@ -186,6 +204,7 @@ export class ListsPage {
       association_name: v.association_name.trim(),
       default_fee_amount: Number(v.default_fee_amount),
       default_joining_fee_amount: Number(v.default_joining_fee_amount),
+      initial_balance: Number(v.initial_balance),
       report_footer: v.report_footer.trim() || null,
     };
     this.run(() => this.data.saveSettings(payload), 'Definições guardadas.');

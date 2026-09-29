@@ -37,9 +37,12 @@ export interface MembershipFee {
   payment_method?: { name: string } | null;
 }
 
+export type AccountKind = 'bank' | 'cash';
+
 export interface PaymentMethod {
   id: string;
   name: string;
+  account: AccountKind;
   active: boolean;
   sort_order: number;
 }
@@ -74,7 +77,7 @@ export interface Transaction {
   created_at?: string;
   // joined
   category?: { name: string } | null;
-  payment_method?: { name: string } | null;
+  payment_method?: { name: string; account: AccountKind } | null;
 }
 
 export interface Settings {
@@ -83,4 +86,30 @@ export interface Settings {
   default_fee_amount: number;
   default_joining_fee_amount: number;
   report_footer: string | null;
+  initial_balance: number;
+  bank_balance: number;
+  bank_balance_date: string | null;
+  cash_balance: number;
+  cash_balance_date: string | null;
+}
+
+export interface Report {
+  id: string;
+  number: number;
+  period_from: string;
+  period_to: string;
+  previous_balance: number;
+  income_total: number;
+  expense_total: number;
+  net: number;
+  expected_balance: number;
+  bank_balance: number;
+  cash_balance: number;
+  total_balance: number;
+  difference: number;
+  status: 'approved';
+  issued_at: string;
+  issued_by: string | null;
+  data: unknown;
+  notes: string | null;
 }

@@ -38,7 +38,8 @@
               "core-js",
               "raf",
               "rgbcolor",
-              "dompurify"
+              "dompurify",
+              "exceljs"
             ]
           },
           "configurations": {

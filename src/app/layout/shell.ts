@@ -15,6 +15,8 @@ import { AuthService } from '../core/auth.service';
 import { THEMES, ThemeService } from '../core/theme.service';
 import { DataService } from '../core/data.service';
 import { ChangePasswordDialog } from '../features/auth/change-password.dialog';
+import { ExportService } from '../features/export/export.service';
+import { UiService } from '../shared/ui.service';
 
 @Component({
   selector: 'app-shell',
@@ -58,6 +60,7 @@ import { ChangePasswordDialog } from '../features/auth/change-password.dialog';
           </button>
           <mat-menu #userMenu="matMenu">
             <button mat-menu-item (click)="changePassword()"><mat-icon>key</mat-icon>Alterar password</button>
+            <button mat-menu-item (click)="exportAll()" [disabled]="exporting()"><mat-icon>download</mat-icon>{{ exporting() ? 'A exportar…' : 'Exportar tudo para Excel' }}</button>
             <button mat-menu-item (click)="logout()"><mat-icon>logout</mat-icon>Sair</button>
           </mat-menu>
         </mat-toolbar>
@@ -89,6 +92,9 @@ export class Shell {
 
   readonly isSmall = toSignal(this.bp.observe('(max-width: 900px)').pipe(map((r) => r.matches)), { initialValue: false });
   readonly associationName = signal('Associação');
+  readonly exporting = signal(false);
+  private readonly exportSvc = inject(ExportService);
+  private readonly ui = inject(UiService);
 
   readonly navItems = [
     { path: '/associados', icon: 'people', label: 'Associados' },
@@ -99,6 +105,18 @@ export class Shell {
 
   constructor() {
     this.data.getSettings().then((s) => this.associationName.set(s.association_name)).catch(() => {});
+  }
+
+  async exportAll() {
+    this.exporting.set(true);
+    try {
+      await this.exportSvc.exportAll();
+      this.ui.toast('Ficheiro Excel gerado.');
+    } catch (e) {
+      this.ui.error(e);
+    } finally {
+      this.exporting.set(false);
+    }
   }
 
   changePassword() {

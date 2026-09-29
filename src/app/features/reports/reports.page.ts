@@ -9,6 +9,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
+import { firstValueFrom } from 'rxjs';
+import { EmitReportDialog, EmitReportDialogData, EmitReportResult } from './emit-report.dialog';
 import { DataService } from '../../core/data.service';
 import { AuthService } from '../../core/auth.service';
 import { Report, Settings, Transaction } from '../../core/models';
@@ -26,7 +29,7 @@ import { generateReportPdf } from './report-pdf';
       <div class="page-header">
         <h1>Relatórios</h1>
         <button matButton (click)="exportDraft()" [disabled]="!report() || loading()"><mat-icon>picture_as_pdf</mat-icon> Exportar rascunho</button>
-        <button matButton="filled" (click)="emitFinal()" [disabled]="!report() || loading() || emitting()"><mat-icon>verified</mat-icon> Emitir relatório final</button>
+        <button matButton="filled" (click)="emitFinal()" [disabled]="!report() || loading() || emitting()" [matTooltip]="report()?.difference ? 'Os saldos não batem certo; confirme-os ao emitir' : ''"><mat-icon>verified</mat-icon> Emitir relatório final</button>
       </div>
 
       <div class="card">
@@ -97,6 +100,11 @@ import { generateReportPdf } from './report-pdf';
             <div class="expense"><span>Diferença (saldos − saldo esperado)</span><strong>{{ r.difference | currency:'EUR' }}</strong></div>
           }
         </div>
+        @if (r.difference !== 0) {
+          <p class="bad-text"><mat-icon>error</mat-icon> Os saldos não coincidem com o saldo esperado. Pode exportar um rascunho, mas o relatório final só pode ser emitido quando a diferença for 0,00 €.</p>
+        } @else {
+          <p class="ok-text"><mat-icon>check_circle</mat-icon> Os saldos batem certo com o saldo esperado.</p>
+        }
       }
 
       <h2>Relatórios emitidos</h2>
@@ -163,6 +171,9 @@ import { generateReportPdf } from './report-pdf';
     .inputs { gap: 12px 16px; }
     .note { margin: 12px 0 0; font-size: 13px; }
     .warn-text { color: #9a6700; }
+    .bad-text, .ok-text { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 8px 0 0; }
+    .bad-text { color: #b3261e; }
+    .ok-text { color: #1b7f3b; }
     .small { font-size: 12px; }
     .actions { white-space: nowrap; }
     .linkbtn { background: none; border: none; padding: 0; color: var(--mat-sys-primary); cursor: pointer; font: inherit; }
@@ -179,6 +190,7 @@ export class ReportsPage {
   private readonly data = inject(DataService);
   private readonly ui = inject(UiService);
   private readonly auth = inject(AuthService);
+  private readonly dialog = inject(MatDialog);
 
   readonly currentYear = new Date().getFullYear();
   readonly loading = signal(true);
@@ -286,29 +298,44 @@ export class ReportsPage {
   }
 
   async emitFinal() {
-    const r = this.report();
-    if (!r) return;
-    const from = r.inputs.from, to = r.inputs.to;
+    const current = this.report();
+    if (!current) return;
+    const from = current.inputs.from, to = current.inputs.to;
 
     const overlap = this.reports().find((x) => x.period_from <= to && x.period_to >= from);
     if (overlap) {
       this.ui.error(`O período sobrepõe-se ao relatório final n.º ${overlap.number} (${fmt(overlap.period_from)} – ${fmt(overlap.period_to)}). Anule-o primeiro ou escolha outro período.`);
       return;
     }
+    const warnings: string[] = [];
     const latest = this.latestReport();
-    const gap = latest && this.suggestedStart() && toIsoDate(this.suggestedStart())! !== from
-      ? `\n\nAtenção: o último relatório terminou em ${fmt(latest.period_to)}; este período não começa no dia seguinte.`
-      : '';
-    const diff = r.difference !== 0 ? `\n\nAtenção: os saldos declarados diferem do saldo esperado em ${eur(r.difference)}.` : '';
+    if (latest && this.suggestedStart() && toIsoDate(this.suggestedStart())! !== from) {
+      warnings.push(`O último relatório terminou em ${fmt(latest.period_to)}; este período não começa no dia seguinte.`);
+    }
 
-    const ok = await this.ui.confirm({
-      title: 'Emitir relatório final',
-      message: `Emitir o relatório de ${fmt(from)} a ${fmt(to)} como documento final (aprovado)? ` +
-        `O total dos saldos (${eur(r.declaredBalances)}) passa a ser o saldo da gerência anterior do próximo relatório, ` +
-        `e os saldos de conta e numerário ficam confirmados à data de ${fmt(to)}.${gap}${diff}`,
-      confirmLabel: 'Emitir',
-    });
-    if (!ok) return;
+    const data: EmitReportDialogData = {
+      from, to,
+      previousBalance: current.inputs.previousBalance,
+      net: current.net,
+      expectedBalance: current.expectedBalance,
+      bankBalance: current.inputs.bankBalance,
+      cashBalance: current.inputs.cashBalance,
+      bankForecast: this.bankForecast(),
+      cashForecast: this.cashForecast(),
+      unallocated: this.unallocatedInPeriod(),
+      warnings,
+    };
+    const result = await firstValueFrom(this.dialog.open<EmitReportDialog, EmitReportDialogData, EmitReportResult>(EmitReportDialog, { width: '640px', data }).afterClosed());
+    if (!result) return;
+
+    // Apply the confirmed balances and rebuild the report from them.
+    this.bankBalance.set(result.bankBalance);
+    this.cashBalance.set(result.cashBalance);
+    const r = this.report()!;
+    if (Math.abs(r.difference) >= 0.005) {
+      this.ui.error('Os saldos não batem certo; o relatório final não pode ser emitido.');
+      return;
+    }
 
     this.emitting.set(true);
     try {
@@ -369,10 +396,6 @@ export class ReportsPage {
 function fmt(iso: string): string {
   const [y, m, d] = iso.split('-');
   return `${d}/${m}/${y}`;
-}
-
-function eur(v: number): string {
-  return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(v);
 }
 
 function prevDay(iso: string): string {

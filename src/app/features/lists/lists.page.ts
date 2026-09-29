@@ -6,6 +6,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { fromIsoDate, toIsoDate } from '../../shared/dates';
+import { round2 } from '../../shared/money';
 import { firstValueFrom } from 'rxjs';
 import { DataService } from '../../core/data.service';
 import { Category, InactiveReason, PaymentMethod, Settings, TransactionType } from '../../core/models';
@@ -15,7 +18,7 @@ import { ListItem, SecondaryAction, SimpleList } from './simple-list';
 
 @Component({
   selector: 'app-lists',
-  imports: [ReactiveFormsModule, MatTabsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, SimpleList],
+  imports: [ReactiveFormsModule, MatTabsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatDatepickerModule, SimpleList],
   template: `
     <div class="page">
       <div class="page-header"><h1>Listas e definições</h1></div>
@@ -59,11 +62,23 @@ import { ListItem, SecondaryAction, SimpleList } from './simple-list';
                   <input matInput type="number" step="0.01" min="0" formControlName="default_joining_fee_amount" />
                   <span matTextSuffix>€</span>
                 </mat-form-field>
+                <div class="full section">Saldos iniciais <span class="muted">— o que havia quando a app começou a ser usada; os movimentos posteriores à data de referência somam-se a estes valores. Enquanto não houver relatórios finais, a soma serve de saldo da gerência anterior.</span></div>
                 <mat-form-field>
-                  <mat-label>Saldo inicial (antes do 1.º relatório final)</mat-label>
-                  <input matInput type="number" step="0.01" formControlName="initial_balance" />
+                  <mat-label>Saldo inicial em conta bancária</mat-label>
+                  <input matInput type="number" step="0.01" formControlName="bank_balance" />
                   <span matTextSuffix>€</span>
-                  <mat-hint>Usado como saldo da gerência anterior enquanto não houver relatórios finais</mat-hint>
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Saldo inicial em numerário</mat-label>
+                  <input matInput type="number" step="0.01" formControlName="cash_balance" />
+                  <span matTextSuffix>€</span>
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Data de referência</mat-label>
+                  <input matInput [matDatepicker]="dp" formControlName="balance_date" />
+                  <mat-datepicker-toggle matSuffix [for]="dp" />
+                  <mat-datepicker #dp />
+                  <mat-hint>Movimentos até esta data (inclusive) não contam</mat-hint>
                 </mat-form-field>
                 <mat-form-field class="full">
                   <mat-label>Rodapé do relatório (opcional)</mat-label>
@@ -81,6 +96,8 @@ import { ListItem, SecondaryAction, SimpleList } from './simple-list';
     .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-top: 16px; }
     .one { padding-top: 16px; max-width: 760px; }
     .hint { margin: 0 0 12px; font-size: 13px; }
+    .section { font-weight: 500; margin: 8px 0 4px; }
+    .section .muted { font-weight: 400; font-size: 13px; }
     @media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
   `],
 })
@@ -105,7 +122,9 @@ export class ListsPage {
     association_name: ['', Validators.required],
     default_fee_amount: [0, [Validators.required, Validators.min(0)]],
     default_joining_fee_amount: [0, [Validators.required, Validators.min(0)]],
-    initial_balance: [0, Validators.required],
+    bank_balance: [0, Validators.required],
+    cash_balance: [0, Validators.required],
+    balance_date: [null as Date | null],
     report_footer: [''],
   });
 
@@ -123,7 +142,9 @@ export class ListsPage {
         association_name: s.association_name,
         default_fee_amount: s.default_fee_amount,
         default_joining_fee_amount: s.default_joining_fee_amount,
-        initial_balance: s.initial_balance,
+        bank_balance: s.bank_balance,
+        cash_balance: s.cash_balance,
+        balance_date: fromIsoDate(s.bank_balance_date ?? s.cash_balance_date),
         report_footer: s.report_footer ?? '',
       });
     } catch (e) {
@@ -204,7 +225,11 @@ export class ListsPage {
       association_name: v.association_name.trim(),
       default_fee_amount: Number(v.default_fee_amount),
       default_joining_fee_amount: Number(v.default_joining_fee_amount),
-      initial_balance: Number(v.initial_balance),
+      bank_balance: Number(v.bank_balance),
+      cash_balance: Number(v.cash_balance),
+      bank_balance_date: toIsoDate(v.balance_date),
+      cash_balance_date: toIsoDate(v.balance_date),
+      initial_balance: round2(Number(v.bank_balance) + Number(v.cash_balance)),
       report_footer: v.report_footer.trim() || null,
     };
     this.run(() => this.data.saveSettings(payload), 'Definições guardadas.');

@@ -69,7 +69,7 @@ export interface EmitReportResult { bankBalance: number; cashBalance: number; }
       }
       @for (w of d.warnings; track w) { <p class="warn-text">{{ w }}</p> }
 
-      <p class="muted small">Ao emitir, o relatório fica registado como aprovado, o total dos saldos passa a ser o saldo da gerência anterior do próximo período e os saldos de conta e numerário ficam confirmados a {{ d.to | date:'dd/MM/yyyy' }}.</p>
+      <p class="muted small">Ao emitir, o relatório fica registado como aprovado e o total dos saldos passa a ser o saldo da gerência anterior do próximo período.</p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button matButton mat-dialog-close>Cancelar</button>

@@ -228,7 +228,7 @@ export class ReportsPage {
       return { value: prev.total_balance, source: `Relatório final n.º ${prev.number} (${fmt(prev.period_from)} – ${fmt(prev.period_to)})` };
     }
     const s = this.settings();
-    return { value: s?.initial_balance ?? 0, source: 'Saldo inicial (Listas e definições → Definições)' };
+    return { value: s?.initial_balance ?? 0, source: 'Saldos iniciais de conta e numerário (Listas e definições → Definições)' };
   });
   readonly previousBalance = computed(() => this.previousInfo().value);
   readonly previousBalanceSource = computed(() => this.previousInfo().source);
@@ -354,7 +354,6 @@ export class ReportsPage {
         issued_by: this.auth.user()?.email ?? null,
         data: r,
       });
-      await this.data.saveSettings({ bank_balance: r.inputs.bankBalance, bank_balance_date: to, cash_balance: r.inputs.cashBalance, cash_balance_date: to });
       const s = this.settings();
       generateReportPdf(r, s?.association_name ?? 'Associação', s?.report_footer ?? null, { draft: false, number: saved.number, issuedAt: saved.issued_at });
       this.ui.toast(`Relatório final n.º ${saved.number} emitido.`);

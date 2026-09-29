@@ -14,7 +14,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { DataService } from '../../core/data.service';
 import { AccountKind, Category, PaymentMethod, Settings, Transaction, TransactionType } from '../../core/models';
 import { forecastBalance, unallocated } from '../../shared/balances';
-import { BalanceDialog, BalanceDialogData } from './balance.dialog';
 import { UiService } from '../../shared/ui.service';
 import { toIsoDate } from '../../shared/dates';
 import { round2 } from '../../shared/money';
@@ -38,16 +37,14 @@ interface Row extends Transaction { balance: number; }
             <div class="balance-head">
               <mat-icon>{{ b.account === 'bank' ? 'account_balance' : 'payments' }}</mat-icon>
               <span>{{ b.account === 'bank' ? 'Conta bancária' : 'Numerário' }}</span>
-              <span class="spacer"></span>
-              <button matButton (click)="confirmBalance(b.account)"><mat-icon>fact_check</mat-icon> Confirmar saldo</button>
             </div>
-            <div class="balance-main"><span class="muted">Saldo atual</span><strong>{{ b.forecast | currency:'EUR' }}</strong></div>
+            <div class="balance-main"><span class="muted">Saldo</span><strong>{{ b.forecast | currency:'EUR' }}</strong></div>
             <div class="muted small">
               @if (b.storedDate) {
-                Saldo confirmado de {{ b.stored | currency:'EUR' }} em {{ b.storedDate | date:'dd/MM/yyyy' }}
-                + {{ b.count }} {{ b.count === 1 ? 'movimento' : 'movimentos' }} desde então ({{ b.movements | currency:'EUR' }})
+                Saldo inicial de {{ b.stored | currency:'EUR' }} a {{ b.storedDate | date:'dd/MM/yyyy' }}
+                + {{ b.count }} {{ b.count === 1 ? 'movimento' : 'movimentos' }} ({{ b.movements | currency:'EUR' }})
               } @else {
-                Sem saldo confirmado · calculado só a partir dos {{ b.count }} {{ b.count === 1 ? 'movimento' : 'movimentos' }} ({{ b.movements | currency:'EUR' }})
+                {{ b.count }} {{ b.count === 1 ? 'movimento' : 'movimentos' }} ({{ b.movements | currency:'EUR' }}) · saldo inicial não definido (Listas e definições → Definições)
               }
             </div>
           </div>
@@ -248,12 +245,6 @@ export class FinancePage {
     } finally {
       this.loading.set(false);
     }
-  }
-
-  confirmBalance(account: AccountKind) {
-    const forecast = this.forecasts().find((f) => f.account === account)!;
-    const data: BalanceDialogData = { account, forecast };
-    this.dialog.open(BalanceDialog, { width: '560px', data }).afterClosed().subscribe((s) => s && this.load());
   }
 
   setYear(y: number) {

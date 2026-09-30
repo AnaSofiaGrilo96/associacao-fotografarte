@@ -58,7 +58,7 @@ import { generateReportPdf } from './report-pdf';
             <mat-label>Saldo em conta bancária</mat-label>
             <input matInput type="number" step="0.01" [ngModel]="bankBalance()" (ngModelChange)="bankBalance.set(+$event || 0)" />
             <span matTextSuffix>€</span>
-            <mat-hint>Previsto pelos movimentos a {{ to() | date:'dd/MM/yyyy' }}: {{ bankForecast() | currency:'EUR' }}
+            <mat-hint>Segundo os movimentos registados: {{ bankForecast() | currency:'EUR' }}
               @if (bankForecast() !== bankBalance()) { · <button class="linkbtn" type="button" (click)="bankBalance.set(bankForecast())">usar</button> }
             </mat-hint>
           </mat-form-field>
@@ -66,13 +66,13 @@ import { generateReportPdf } from './report-pdf';
             <mat-label>Saldo em numerário</mat-label>
             <input matInput type="number" step="0.01" [ngModel]="cashBalance()" (ngModelChange)="cashBalance.set(+$event || 0)" />
             <span matTextSuffix>€</span>
-            <mat-hint>Previsto pelos movimentos a {{ to() | date:'dd/MM/yyyy' }}: {{ cashForecast() | currency:'EUR' }}
+            <mat-hint>Segundo os movimentos registados: {{ cashForecast() | currency:'EUR' }}
               @if (cashForecast() !== cashBalance()) { · <button class="linkbtn" type="button" (click)="cashBalance.set(cashForecast())">usar</button> }
             </mat-hint>
           </mat-form-field>
         </div>
         <p class="muted note">As quotas e joias contam como receita na data em que foram pagas, independentemente do ano a que dizem respeito.
-          @if (unallocatedInPeriod() > 0) { <span class="warn-text">{{ unallocatedInPeriod() }} {{ unallocatedInPeriod() === 1 ? 'movimento do período não tem' : 'movimentos do período não têm' }} método de pagamento e não {{ unallocatedInPeriod() === 1 ? 'entra' : 'entram' }} nos saldos previstos.</span> }
+          @if (unallocatedInPeriod() > 0) { <span class="warn-text">{{ unallocatedInPeriod() }} {{ unallocatedInPeriod() === 1 ? 'movimento do período não tem' : 'movimentos do período não têm' }} método de pagamento e não {{ unallocatedInPeriod() === 1 ? 'entra' : 'entram' }} nos saldos calculados.</span> }
         </p>
       </div>
 

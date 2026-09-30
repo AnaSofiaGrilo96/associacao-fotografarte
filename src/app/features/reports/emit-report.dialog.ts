@@ -30,7 +30,7 @@ export interface EmitReportResult { bankBalance: number; cashBalance: number; }
   template: `
     <h2 mat-dialog-title>Emitir relatório final</h2>
     <mat-dialog-content>
-      <p>Confirme os saldos reais a <strong>{{ d.to | date:'dd/MM/yyyy' }}</strong> (extrato bancário e caixa). O relatório só pode ser emitido quando o total dos saldos coincide com o saldo esperado.</p>
+      <p>Os saldos abaixo são os que resultam dos movimentos registados. Confirme-os com o extrato bancário e o dinheiro em caixa a <strong>{{ d.to | date:'dd/MM/yyyy' }}</strong>; se forem diferentes, corrija-os aqui. O relatório só pode ser emitido quando o total dos saldos coincide com o saldo esperado.</p>
 
       <div class="rows">
         <div><span>Saldo da gerência anterior</span><strong>{{ d.previousBalance | currency:'EUR' }}</strong></div>
@@ -43,13 +43,13 @@ export interface EmitReportResult { bankBalance: number; cashBalance: number; }
           <mat-label>Saldo em conta bancária</mat-label>
           <input matInput type="number" step="0.01" [ngModel]="bank()" (ngModelChange)="bank.set(+$event || 0)" />
           <span matTextSuffix>€</span>
-          <mat-hint>Previsto pelos movimentos: {{ d.bankForecast | currency:'EUR' }}</mat-hint>
+          <mat-hint>Segundo os movimentos: {{ d.bankForecast | currency:'EUR' }}</mat-hint>
         </mat-form-field>
         <mat-form-field subscriptSizing="dynamic">
           <mat-label>Saldo em numerário</mat-label>
           <input matInput type="number" step="0.01" [ngModel]="cash()" (ngModelChange)="cash.set(+$event || 0)" />
           <span matTextSuffix>€</span>
-          <mat-hint>Previsto pelos movimentos: {{ d.cashForecast | currency:'EUR' }}</mat-hint>
+          <mat-hint>Segundo os movimentos: {{ d.cashForecast | currency:'EUR' }}</mat-hint>
         </mat-form-field>
       </div>
 
@@ -65,7 +65,7 @@ export interface EmitReportResult { bankBalance: number; cashBalance: number; }
         <p class="bad-text">Há uma diferença de {{ difference() | currency:'EUR' }}. Verifique se faltam movimentos, se algum valor está errado ou se algum movimento tem o método de pagamento trocado. Enquanto a diferença não for zero, o relatório não é válido e só pode ser exportado como rascunho.</p>
       }
       @if (d.unallocated > 0) {
-        <p class="warn-text">{{ d.unallocated }} {{ d.unallocated === 1 ? 'movimento do período não tem' : 'movimentos do período não têm' }} método de pagamento; os saldos previstos não os incluem.</p>
+        <p class="warn-text">{{ d.unallocated }} {{ d.unallocated === 1 ? 'movimento do período não tem' : 'movimentos do período não têm' }} método de pagamento; os saldos calculados não os incluem.</p>
       }
       @for (w of d.warnings; track w) { <p class="warn-text">{{ w }}</p> }
 
